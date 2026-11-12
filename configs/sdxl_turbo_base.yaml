@@ -1,0 +1,42 @@
+# Configuration for SDXL-Turbo (proxy) / SDXL-Base-1.0 (teacher) pair
+# Inherits from default.yaml
+
+defaults:
+  - default
+
+# Model family
+model_family: sdxl
+
+# Proxy: SDXL-Turbo (adversarial distillation, 1-4 step)
+proxy_steps: 4
+proxy_guidance_scale: 0.0
+
+# Teacher: SDXL-Base 1.0 (per model card)
+teacher_steps: 50
+guidance_scale: 7.5  # traditional CFG
+true_cfg_scale: 1.0
+
+# SDXL uses 4-channel latents (UNet, not DiT)
+
+# Search settings
+num_candidates: 256
+top_k: 16
+batch_size: 10
+
+# Local refinement
+local_refine: true
+local_perturbations: 8
+local_rounds: 4
+local_epsilon: 0.1
+
+# Teacher refinement
+teacher_refine: true
+refinement_strategy: same_noise
+
+# Image size (SDXL native 1024)
+image_size: 1024
+
+# Model paths — point to HF snapshot dirs in overflow cache
+model_paths:
+  proxy: /root/.cache/huggingface_overflow/hub/models--stabilityai--sdxl-turbo/snapshots/71153311d3dbb46851df1931d3ca6e939de83304
+  teacher: /root/.cache/huggingface_overflow/hub/models--stabilityai--stable-diffusion-xl-base-1.0/snapshots/462165984030d82259a11f4367a4eed129e94a7b

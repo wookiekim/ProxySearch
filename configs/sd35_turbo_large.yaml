@@ -1,0 +1,41 @@
+# Configuration for SD3.5-Large-Turbo (proxy) / SD3.5-Large (teacher) pair
+# Inherits from default.yaml
+
+defaults:
+  - default
+
+# Model family
+model_family: sd3
+
+# Proxy: SD3.5-Large-Turbo
+proxy_steps: 4
+proxy_guidance_scale: 0.0  # Turbo is distilled without CFG
+
+# Teacher: SD3.5-Large (per Stability AI model card)
+teacher_steps: 28
+guidance_scale: 4.5  # traditional CFG with batch doubling (model card recommends 3.5-4.5)
+
+# SD3.5 uses 16-channel latents (same as FLUX)
+
+# Search settings optimized for SD3.5
+num_candidates: 256
+top_k: 16
+batch_size: 10  # SD3.5 is smaller than FLUX, can batch more
+
+# Local refinement
+local_refine: true
+local_perturbations: 8
+local_rounds: 4
+local_epsilon: 0.1
+
+# Teacher refinement
+teacher_refine: true
+refinement_strategy: same_noise
+
+# Image size
+image_size: 1024
+
+# Model paths (null = auto-resolve from HuggingFace)
+model_paths:
+  proxy: null  # "stabilityai/stable-diffusion-3.5-large-turbo"
+  teacher: null  # "stabilityai/stable-diffusion-3.5-large"

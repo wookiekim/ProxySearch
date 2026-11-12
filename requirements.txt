@@ -1,0 +1,36 @@
+# Main environment (Python 3.12). ImageReward and the upstream GenEval scorer
+# need older transformers and live in separate venvs; see INSTALL.md.
+
+# Core
+torch>=2.5
+torchvision
+diffusers>=0.32
+transformers>=5.5
+accelerate
+safetensors
+huggingface_hub
+sentencepiece
+protobuf
+peft
+
+# Verifiers
+open-clip-torch>=2.24
+
+# Utilities
+omegaconf>=2.3
+numpy
+scipy
+pandas
+Pillow
+tqdm
+matplotlib
+seaborn
+
+# Optional: HPSv2 verifier, wandb logging, FID / LPIPS metrics
+# hpsv2
+# wandb
+# pytorch-fid
+# lpips
+
+# Tests
+pytest

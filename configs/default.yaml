@@ -1,0 +1,61 @@
+# Default configuration for ProxySearch
+# This file contains the base hyperparameters that can be overridden by specific configs
+
+# Model configuration
+model_family: flux  # "flux" or "sd3"
+
+# Search configuration
+num_candidates: 256  # N: number of initial noise candidates
+top_k: 16  # K: number of candidates for local refinement
+batch_size: 8  # batch size for proxy evaluation
+
+# Local refinement
+local_refine: true
+local_perturbations: 8  # M: perturbations per candidate per round
+local_rounds: 4
+local_epsilon: 0.1
+
+# Teacher refinement
+teacher_refine: true
+refinement_strategy: same_noise  # "same_noise", "sdedit", "ddim_inversion"
+
+# Proxy configuration
+proxy_steps: 4
+proxy_guidance_scale: 0.0  # FLUX-schnell uses no CFG
+
+# Teacher configuration
+teacher_steps: 28  # FLUX-dev default
+guidance_scale: 3.5
+
+# Image configuration
+image_size: 1024
+
+# Verifier configuration
+verifiers:
+  - clip
+  - image_reward
+verifier_weights: null  # null means equal weights
+
+# Selection configuration
+selection_strategy: top_k  # "top_k", "tournament", "softmax", "epsilon_greedy"
+
+# Reproducibility
+seed: 42
+
+# Logging
+use_wandb: false
+wandb_project: proxysearch
+log_dir: outputs/logs
+
+# Output
+output_dir: outputs/images
+save_all_candidates: false
+
+# Model paths (set these to local paths or HF IDs; null = auto-resolve)
+model_paths:
+  proxy: null  # e.g., "black-forest-labs/FLUX.1-schnell"
+  teacher: null  # e.g., "black-forest-labs/FLUX.1-dev"
+  verifiers:
+    clip: null
+    image_reward: null
+    aesthetic: null

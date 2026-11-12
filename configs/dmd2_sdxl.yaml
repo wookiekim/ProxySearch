@@ -1,0 +1,40 @@
+# Configuration for DMD2 SDXL (score-distillation proxy) -> SDXL-Base teacher.
+# Used by scripts/run_rank_correlation.py for the score-/consistency-distillation extension.
+
+defaults:
+  - default
+
+model_family: sdxl
+
+# Proxy: SDXL-Base UNet replaced with DMD2 1-step UNet (Yin et al., NeurIPS 2024).
+# DMD2 ships dedicated 1-step weights (`dmd2_sdxl_1step_unet_fp16.bin`),
+# trained for 1-NFE inference; matches paper convention (k=1 across the
+# distilled-proxy column in Tab 3). DMD2 is CFG-free.
+proxy_steps: 1
+proxy_guidance_scale: 0.0
+
+# Teacher: full SDXL-Base 1.0, 50 steps, traditional CFG 7.5.
+teacher_steps: 50
+guidance_scale: 7.5
+true_cfg_scale: 1.0
+
+# Match the rank-transfer study resolution.
+image_size: 512
+
+verifiers:
+  - brightness
+  - compressibility
+  - contrast
+  - colorfulness
+  - saturation
+  - sharpness
+  - edge_density
+  - color_temperature
+  - clip
+  - image_reward
+  - aesthetic
+
+model_paths:
+  proxy: /root/.cache/huggingface_overflow/hub/models--stabilityai--stable-diffusion-xl-base-1.0/snapshots/462165984030d82259a11f4367a4eed129e94a7b
+  proxy_unet_override: hf:tianweiy/DMD2/dmd2_sdxl_1step_unet_fp16.bin
+  teacher: /root/.cache/huggingface_overflow/hub/models--stabilityai--stable-diffusion-xl-base-1.0/snapshots/462165984030d82259a11f4367a4eed129e94a7b

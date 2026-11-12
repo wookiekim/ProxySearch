@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProxySearch: Decoupled Inference-Time Scaling for Diffusion Models</title>
+<meta name="description" content="ProxySearch: distilled few-step diffusion models rank image statistics like their teachers, but not semantics. We use this asymmetry for cheap inference-time noise search under a joint constraint.">
+<meta property="og:title" content="ProxySearch: Decoupled Inference-Time Scaling for Diffusion Models via Asymmetric Noise-Rank Transfer">
+<meta property="og:description" content="Distilled proxies rank image statistics, not semantics. ProxySearch screens noises with the proxy and lets the teacher pick on semantics.">
+<meta property="og:image" content="https://wookiekim.github.io/ProxySearch/static/images/teaser.png">
+<meta property="og:url" content="https://wookiekim.github.io/ProxySearch/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#14213d; --body:#333c4a; --muted:#647082; --line:#e3e8ec; --soft:#f4f7f8;
+  --teal:#1b7f79; --teal-soft:#d5ecea; --orange:#c8701a; --max:960px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#fff;color:var(--body);font:17px/1.65 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--teal);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 20px}
+header{text-align:center;padding:64px 0 28px}
+.venue{display:inline-block;font-weight:700;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);background:var(--teal-soft);padding:5px 14px;border-radius:999px}
+h1{color:var(--ink);font-size:clamp(30px,5.2vw,50px);line-height:1.14;font-weight:800;letter-spacing:-.02em;margin:20px 0 6px;text-wrap:balance}
+h1 .sub{display:block;font-size:.56em;font-weight:600;letter-spacing:-.01em;color:var(--body);margin-top:12px;line-height:1.3}
+.authors{font-size:20px;margin:24px 0 4px;display:flex;gap:6px 30px;justify-content:center;flex-wrap:wrap}
+.authors a,.authors span.a{font-weight:600}
+.authors span.a{color:var(--ink)}
+.affil{color:var(--muted);font-size:16px;display:flex;gap:4px 24px;justify-content:center;flex-wrap:wrap}
+sup{font-size:.65em}
+.btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:26px 0 0}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:#fff;font-weight:600;font-size:15px;padding:10px 20px;border-radius:999px;transition:transform .15s,background .15s}
+.btn:hover{background:#22345c;text-decoration:none;transform:translateY(-1px)}
+.btn svg{width:17px;height:17px;fill:currentColor}
+.btn.soon{background:var(--soft);color:var(--muted);border:1px solid var(--line);cursor:default}
+.btn.soon:hover{transform:none;background:var(--soft)}
+.btn.soon small{font-weight:500;font-size:12px}
+section{padding:34px 0}
+section+section{border-top:1px solid var(--line)}
+h2{color:var(--ink);font-size:28px;letter-spacing:-.015em;margin:0 0 16px;text-align:center}
+h3{color:var(--ink);font-size:19px;margin:28px 0 8px}
+p{margin:0 0 14px}
+.tldr{background:var(--soft);border-left:4px solid var(--teal);border-radius:8px;padding:18px 22px;font-size:18px;color:var(--ink)}
+figure{margin:22px 0 6px}
+figure img{display:block;width:100%;height:auto;border-radius:8px}
+figure.narrow img{max-width:720px;margin:0 auto}
+figcaption{font-size:14.5px;line-height:1.55;color:var(--muted);margin-top:10px;text-align:center}
+figcaption b{color:var(--ink)}
+video{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--line);background:#14213d}
+.abstract{text-align:justify;hyphens:auto}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:22px 0 4px}
+.stat{background:var(--soft);border-radius:10px;padding:16px 18px}
+.stat b{display:block;font-size:30px;line-height:1.15;color:var(--teal);letter-spacing:-.02em}
+.stat.o b{color:var(--orange)} .stat.n b{color:var(--ink)}
+.stat span{font-size:14.5px;color:var(--muted)}
+.steps{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}
+.step{background:var(--soft);border-radius:10px;padding:16px 18px}
+.step .n{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;font-weight:700;font-size:14px;margin-right:8px}
+.step:nth-child(2) .n{background:var(--ink)}
+.step b{color:var(--ink)}
+.step p{margin:8px 0 0;font-size:15.5px}
+.tablewrap{overflow-x:auto;margin:16px 0 6px}
+table{border-collapse:collapse;width:100%;font-size:15px;font-variant-numeric:tabular-nums;min-width:560px}
+th,td{padding:8px 12px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{color:var(--ink);font-weight:600;border-bottom:2px solid var(--ink)}
+tr.panel td{background:var(--soft);font-weight:600;color:var(--ink);text-align:left;font-size:14px}
+tr.ours td{color:var(--ink);font-weight:600}
+td.best{color:var(--teal);font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center}
+pre{position:relative;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:18px 20px;overflow-x:auto;font:14px/1.6 "JetBrains Mono",ui-monospace,Consolas,monospace;color:var(--ink);margin:0}
+.copy{position:absolute;top:10px;right:10px;font:600 12px Inter,sans-serif;background:#fff;border:1px solid var(--line);border-radius:6px;padding:5px 10px;color:var(--muted);cursor:pointer}
+.copy:hover{color:var(--teal);border-color:var(--teal)}
+footer{border-top:1px solid var(--line);padding:26px 0 44px;text-align:center;color:var(--muted);font-size:14px}
+@media (max-width:680px){
+  body{font-size:16px} header{padding-top:40px}
+  .stats,.steps,.two{grid-template-columns:1fr}
+  .abstract{text-align:left}
+}
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <span class="venue">NeurIPS 2026</span>
+  <h1>ProxySearch
+    <span class="sub">Decoupled Inference-Time Scaling for Diffusion Models via Asymmetric Noise-Rank Transfer</span>
+  </h1>
+  <div class="authors">
+    <span><a href="https://wookiekim.github.io/">Seungwook Kim</a><sup>1</sup></span>
+    <span><span class="a">Jongmin Lee</span><sup>2</sup></span>
+  </div>
+  <div class="affil"><span><sup>1</sup>GenGenAI</span><span><sup>2</sup>Chung-Ang University</span></div>
+  <div class="btns">
+    <!-- TODO: replace the two "soon" buttons with real links, e.g.
+         <a class="btn" href="https://arxiv.org/abs/XXXX.XXXXX">…Paper</a> -->
+    <span class="btn soon"><svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6V2zm8 1.5V8h4.5L14 3.5zM8 12v1.5h8V12H8zm0 3.5V17h8v-1.5H8z"/></svg>Paper <small>(coming soon)</small></span>
+    <span class="btn soon"><svg viewBox="0 0 24 24"><path d="M12 .5a11.5 11.5 0 0 0-3.6 22.4c.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.4 1 .1-.8.4-1.3.8-1.6-2.6-.3-5.3-1.3-5.3-5.700 0-1.300.5-2.300 1.200-3.100-.1-.3-.5-1.500.1-3.100 0 0 1-.3 3.200 1.200a11 11 0 0 1 5.800 0c2.200-1.500 3.200-1.200 3.200-1.200.6 1.600.2 2.800.1 3.100.8.8 1.200 1.800 1.200 3.100 0 4.400-2.700 5.400-5.300 5.700.4.4.8 1.100.8 2.200v3.200c0 .3.200.7.800.6A11.500 11.500 0 0 0 12 .500z"/></svg>Code <small>(coming soon)</small></span>
+    <a class="btn" href="#video"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Video</a>
+    <a class="btn" href="#bibtex"><svg viewBox="0 0 24 24"><path d="M7 7h4v4H9c0 1.700.800 2.500 2 3l-.700 1.500C8 14.700 7 12.800 7 10V7zm6 0h4v4h-2c0 1.700.800 2.500 2 3l-.700 1.500C14 14.700 13 12.800 13 10V7z"/></svg>BibTeX</a>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section>
+  <p class="tldr"><b>TL;DR.</b> A distilled few-step diffusion model ranks candidate noises like its teacher on simple image statistics, but not on semantics. ProxySearch lets the 1-step proxy screen noises for the look you want, and lets the teacher pick the best content among the survivors.</p>
+  <figure>
+    <img src="static/images/teaser.png" alt="Three SD3.5 prompts, each rendered five times with a target statistic increasing from left to right">
+    <figcaption><b>ProxySearch sets an image statistic by choosing the initial noise.</b> Each row is one SD3.5 prompt, with the target value of one statistic (brightness, saturation, incompressibility) increasing from left to right.</figcaption>
+  </figure>
+</section>
+
+<section id="video">
+  <h2>5-Minute Overview</h2>
+  <video controls preload="metadata" playsinline poster="static/images/video_poster.jpg">
+    <source src="static/videos/proxysearch_overview.mp4" type="video/mp4">
+  </video>
+</section>
+
+<section>
+  <h2>Abstract</h2>
+  <p class="abstract">Noise search at inference time improves text-to-image diffusion but requires many multi-step teacher rollouts per query. Distilled few-step models are now routinely released, yet their potential as proxies inside noise search is uncharacterized. We measure proxy–teacher rank agreement across three distillation regimes and three backbones (DiT, MMDiT, UNet) and find a sharp asymmetry. On our main pool, closed-form image statistics transfer from the proxy to the teacher (Spearman ρ up to 0.80), while learned semantic scorers do not (ρ ≤ 0.12). Paired null controls trace this rank to the first denoising step for coarse statistics and to distillation for finer ones. We use the asymmetry for noise search under a joint constraint: a semantic reward specifies content, and a numeric target specifies image statistics. In ProxySearch, the proxy filters candidates by statistical match in 1 step, and the teacher returns the survivor with the highest semantic reward. No weight trades one objective against the other. On FLUX-1024, ProxySearch tightens the statistical target by 21–23% at the same number of teacher trajectories, with no detected loss on the optimized reward.</p>
+</section>
+
+<section>
+  <h2>Distilled Proxies Rank Statistics, Not Semantics</h2>
+  <p>Most major text-to-image models ship with a distilled sibling (FLUX-schnell, SD3.5-Large-Turbo, SDXL-Turbo) that search pipelines use only as a faster generator. We ask whether it can also <em>judge</em> candidates: for each prompt, we render the same 32 noises with the 1-step proxy and the full teacher, score both with 11 verifiers, and measure how well the two rankings agree.</p>
+  <figure>
+    <img src="static/images/rank_transfer.png" alt="Heatmap of proxy-to-teacher Spearman correlation for 11 verifiers on FLUX, SD3.5 and SDXL">
+    <figcaption><b>Proxy–teacher rank correlation splits along statistics vs. semantics.</b> Spearman ρ between the proxy's and the teacher's rankings of the same noises, for 11 verifiers on 3 model pairs.</figcaption>
+  </figure>
+  <div class="stats">
+    <div class="stat"><b>ρ up to 0.80</b><span>closed-form image statistics</span></div>
+    <div class="stat o"><b>ρ ≤ 0.12</b><span>learned semantic rewards</span></div>
+    <div class="stat n"><b>6–16×</b><span>brightness vs. CLIP rank agreement, on every pair</span></div>
+  </div>
+
+  <h3>Where does the statistical rank come from?</h3>
+  <p>Paired null controls on a shared noise pool show that the raw noise does not carry this rank. A single step of the undistilled teacher already ranks coarse statistics such as brightness, and distillation extends the agreement to finer ones such as sharpness and edge density. The distilled proxy is the only 1-step condition with significant rank agreement on all eight statistics.</p>
+  <figure class="narrow">
+    <img src="static/images/null_controls.png" alt="Bar chart comparing raw-noise statistics, one undistilled teacher step and the distilled proxy on FLUX and SD3.5">
+    <figcaption><b>Paired null controls.</b> Raw-noise statistics do not transfer, one undistilled teacher step ranks coarse statistics, and the distilled proxy also ranks finer ones.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Why Search for a Look?</h2>
+  <p>Naming a look in the prompt does not set it. Even prompts that say “dark”, “bright” or “saturated” leave wide variance on the named axis across noises. Choosing the noise does change the look, which makes a numeric statistical target a natural second constraint for noise search.</p>
+  <figure class="narrow">
+    <img src="static/images/prompt_variance.png" alt="Five prompts that name a statistical axis, rendered from a random noise and from the ProxySearch noise">
+    <figcaption><b>Prompt wording alone leaves wide variance on the named statistical axis.</b> Random noise (top) vs. the noise chosen by ProxySearch (bottom).</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Method</h2>
+  <p>ProxySearch casts noise search as a joint constraint: a semantic reward specifies the content, and a numeric target <i>τ</i> (for example, brightness 0.72 and contrast 0.26) specifies image statistics. Each part is routed to the model that can rank it.</p>
+  <figure>
+    <img src="static/images/method.png" alt="Diagram comparing conventional noise search with ProxySearch">
+    <figcaption><b>Conventional noise search vs. ProxySearch.</b> Conventional search renders all <i>N</i> candidates with the teacher. ProxySearch scores the same <i>N</i> noises with the distilled proxy at about one step each, and renders only the top <i>K</i> with the teacher.</figcaption>
+  </figure>
+  <div class="steps">
+    <div class="step"><span class="n">1</span><b>Proxy statistical filter</b><p>Render all <i>N</i> noises with the 1-step proxy and keep the <i>K</i> that best match the statistical target.</p></div>
+    <div class="step"><span class="n">2</span><b>Teacher semantic argmax</b><p>Render only the <i>K</i> survivors with the teacher and return the one with the highest semantic reward.</p></div>
+  </div>
+  <p>The method has two integer parameters, <i>N</i> and <i>K</i>, and no weight trading one objective against the other. At <i>N</i> = 64 and <i>K</i> = 8 on FLUX-1024, it runs the same 8 teacher trajectories as an 8-candidate teacher-only search and adds 64 proxy steps to the teacher's 400: 16% more denoising steps.</p>
+</section>
+
+<section>
+  <h2>Results</h2>
+  <h3 style="margin-top:6px">Tighter statistics at matched teacher trajectories</h3>
+  <p>On the full GenEval suite at FLUX-1024 (1,106 paired prompt–target cells), ProxySearch tightens the statistical ℓ<sub>1</sub> distance to the target by 21–23% under three search rewards, and stays on par with teacher argmax on the reward it optimizes.</p>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Method</th><th>stat. ℓ<sub>1</sub> ↓</th><th>GenEval % ↑</th><th>PickScore ↑</th><th>HPSv2 ↑</th><th>CLIP ↑</th><th>ImageReward ↑</th></tr></thead>
+    <tbody>
+      <tr class="panel"><td colspan="7">GenEval-driven search</td></tr>
+      <tr><td>Teacher argmax (8 candidates)</td><td>0.302</td><td>81.6</td><td>23.50</td><td>0.311</td><td>0.364</td><td>1.06</td></tr>
+      <tr class="ours"><td>ProxySearch (K = 8)</td><td class="best">0.233</td><td>82.5</td><td>23.52</td><td>0.312</td><td>0.365</td><td>1.12</td></tr>
+      <tr class="panel"><td colspan="7">PickScore-driven search</td></tr>
+      <tr><td>Teacher argmax (8 candidates)</td><td>0.297</td><td>78.9</td><td>24.14</td><td>0.322</td><td>0.379</td><td>1.25</td></tr>
+      <tr class="ours"><td>ProxySearch (K = 8)</td><td class="best">0.232</td><td>79.2</td><td>24.14</td><td>0.322</td><td>0.378</td><td>1.24</td></tr>
+      <tr class="panel"><td colspan="7">HPSv2-driven search</td></tr>
+      <tr><td>Teacher argmax (8 candidates)</td><td>0.296</td><td>79.0</td><td>23.91</td><td>0.329</td><td>0.377</td><td>1.27</td></tr>
+      <tr class="ours"><td>ProxySearch (K = 8)</td><td class="best">0.234</td><td>78.7</td><td>23.88</td><td>0.329</td><td>0.377</td><td>1.26</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <figcaption>FLUX-1024, <i>N</i> = 64, <i>K</i> = 8, 1-step proxy. Both methods render 8 teacher trajectories per query.</figcaption>
+
+  <h3>More teacher candidates do not substitute for the proxy</h3>
+  <div class="two">
+    <div>
+      <p>Giving teacher-only search the full 64-candidate pool leaves the statistical distance unchanged (0.304 → 0.306), while ProxySearch reaches 0.230 at the teacher cost of 8 candidates. The gain comes from screening on the statistic, not from pool size.</p>
+      <p>The tightening also replicates on other backbones, at a GenEval cost of 2–4 points relative to teacher argmax.</p>
+    </div>
+    <figure style="margin:0"><img src="static/images/pool_size.png" alt="Bar chart: teacher-only search with 8 and 64 candidates vs. ProxySearch"></figure>
+  </div>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Proxy → Teacher</th><th>Argmax GenEval</th><th>Ours GenEval</th><th>Argmax stat. ℓ<sub>1</sub></th><th>Ours stat. ℓ<sub>1</sub></th></tr></thead>
+    <tbody>
+      <tr><td>SD3.5-Large-Turbo → SD3.5-Large</td><td>92.0</td><td>88.0</td><td>0.204</td><td class="best">0.120</td></tr>
+      <tr><td>SDXL-Turbo → SDXL</td><td>83.0</td><td>81.0</td><td>0.305</td><td class="best">0.267</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <figcaption>Bright, high-contrast target, <i>N</i> = 64, <i>K</i> = 8, 1-step proxy, 50 GenEval prompts per pair.</figcaption>
+</section>
+
+<section>
+  <h2>Qualitative Results</h2>
+  <figure>
+    <img src="static/images/qualitative.png" alt="Four prompts rendered by teacher argmax, a composite reward and ProxySearch">
+    <figcaption><b>Qualitative comparison over the same noise pool.</b> Top row: bright, high-contrast target. Bottom row: dark, low-contrast target. ProxySearch attains the lowest statistical distance to the target among the three methods on these prompts.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>User Study</h2>
+  <div class="stats" style="grid-template-columns:1fr 1fr">
+    <div class="stat"><b>71.7%</b><span>of 600 judgments prefer ProxySearch over teacher argmax for the prompt plus the requested look</span></div>
+    <div class="stat n"><b>84.2%</b><span>of 400 judgments pick ProxySearch as the more natural photo vs. a post-processed teacher image</span></div>
+  </div>
+  <p style="font-size:15px;color:var(--muted);margin-top:14px">The preference arm uses pairs where ProxySearch shifted the statistic toward the requested look. Rates differ by look: 82.0–88.4% for dark, warm and cool, 70.1% for high sharpness, and at chance for bright/high-contrast and low sharpness.</p>
+</section>
+
+<section id="bibtex">
+  <h2>BibTeX</h2>
+  <pre><button class="copy" type="button">Copy</button><code id="bib">@inproceedings{kim2026proxysearch,
+  title     = {ProxySearch: Decoupled Inference-Time Scaling for Diffusion Models via Asymmetric Noise-Rank Transfer},
+  author    = {Kim, Seungwook and Lee, Jongmin},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2026}
+}</code></pre>
+</section>
+
+</main>
+
+<footer class="wrap">
+  © 2026 The ProxySearch authors.
+</footer>
+
+<script>
+document.querySelector('.copy').addEventListener('click', function () {
+  var btn = this;
+  navigator.clipboard.writeText(document.getElementById('bib').textContent).then(function () {
+    btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
+  });
+});
+</script>
+</body>
+</html>
